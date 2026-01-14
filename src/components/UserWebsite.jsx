@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-    Menu, X, Sparkles, ArrowRight, Heart, MessageCircle, Coffee, Gamepad2, Shield, Users, Play, Maximize2
+    Menu, X, Sparkles, ArrowRight, Heart, MessageCircle, Coffee, Gamepad2, Shield, Users, Play, Maximize2, Youtube
 } from 'lucide-react';
 import { useSiteData } from '@/hooks/useSiteData';
 import FadeIn from './ui/FadeIn';
@@ -368,14 +368,14 @@ export default function UserWebsite() {
                                             <ArrowRight className="ml-auto opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                                         </a>
                                     )}
-                                    {siteData.footer?.showDiscord && (
-                                        <a href={siteData.footer?.discordLink || "#"} target="_blank" rel="noreferrer" className="flex items-center p-6 bg-slate-800 rounded-2xl hover:bg-[#5865F2] hover:text-white transition-all group cursor-pointer">
+                                    {siteData.footer?.showYoutube && (
+                                        <a href={siteData.footer?.youtubeLink || "#"} target="_blank" rel="noreferrer" className="flex items-center p-6 bg-slate-800 rounded-2xl hover:bg-[#FF0000] hover:text-white transition-all group cursor-pointer">
                                             <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                                                <Gamepad2 size={24} />
+                                                <Youtube size={24} />
                                             </div>
                                             <div className="ml-5 text-left">
-                                                <div className="text-xs font-bold opacity-50 uppercase tracking-wider mb-1">Community</div>
-                                                <div className="text-xl font-bold">디스코드 채널</div>
+                                                <div className="text-xs font-bold opacity-50 uppercase tracking-wider mb-1">Video</div>
+                                                <div className="text-xl font-bold">유튜브 채널</div>
                                             </div>
                                             <ArrowRight className="ml-auto opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                                         </a>

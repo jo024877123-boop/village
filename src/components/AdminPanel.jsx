@@ -892,12 +892,12 @@ export default function AdminPanel({ onLogout }) {
 
                                 <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-sm font-bold text-slate-700">디스코드 링크 노출</label>
+                                        <label className="text-sm font-bold text-slate-700">유튜브 링크 노출</label>
                                         <input
                                             type="checkbox"
-                                            checked={tempData.footer?.showDiscord || false}
+                                            checked={tempData.footer?.showYoutube || false}
                                             onChange={(e) => {
-                                                setTempData({ ...tempData, footer: { ...tempData.footer, showDiscord: e.target.checked } });
+                                                setTempData({ ...tempData, footer: { ...tempData.footer, showYoutube: e.target.checked } });
                                                 setIsSaved(false);
                                             }}
                                             className="w-5 h-5 accent-indigo-600"
@@ -905,12 +905,12 @@ export default function AdminPanel({ onLogout }) {
                                     </div>
                                     <input
                                         type="text"
-                                        value={tempData.footer?.discordLink || ""}
+                                        value={tempData.footer?.youtubeLink || ""}
                                         onChange={(e) => {
-                                            setTempData({ ...tempData, footer: { ...tempData.footer, discordLink: e.target.value } });
+                                            setTempData({ ...tempData, footer: { ...tempData.footer, youtubeLink: e.target.value } });
                                             setIsSaved(false);
                                         }}
-                                        placeholder="https://discord.gg/..."
+                                        placeholder="https://youtube.com/@..."
                                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-indigo-500 outline-none"
                                     />
                                 </div>
