@@ -1,0 +1,848 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Gamepad2, Heart, MessageCircle, Coffee, Users, Sparkles, Target, Shield, 
+  Menu, X, ChevronRight, Zap, Crown, ArrowRight, LayoutDashboard, 
+  Image as ImageIcon, List, Calendar, Settings, LogOut, Save, Lock,
+  Plus, Trash2, RefreshCcw, Loader2, MousePointer2, AlertCircle, Link as LinkIcon,
+  Globe, Mic, Video, Palette, Code, Music
+} from 'lucide-react';
+
+// --- 0. 아이콘 매핑 (DB 저장용 문자열 <-> 컴포넌트 변환) ---
+const ICON_MAP = {
+  Gamepad2: Gamepad2,
+  Target: Target,
+  Zap: Zap,
+  Crown: Crown,
+  Users: Users,
+  Sparkles: Sparkles,
+  Coffee: Coffee,
+  MousePointer2: MousePointer2,
+  MessageCircle: MessageCircle,
+  Globe: Globe,
+  Mic: Mic,
+  Video: Video,
+  Palette: Palette,
+  Code: Code,
+  Music: Music,
+  Heart: Heart
+};
+
+// --- 1. 초기 데이터 (Database 대용) ---
+const initialSiteData = {
+  hero: {
+    since: "2024",
+    titlePrimary: "경쟁을 넘어,",
+    titleSecondary: "함께의 품격으로.",
+    subtitle: "승패의 스트레스에서 벗어나, 사람 냄새 나는 곳.\n매너와 존중을 기반으로 한 프라이빗 게임 라운지입니다.",
+  },
+  games: [
+    { id: 1, name: "Overwatch 2", color: "text-orange-500", icon: "Target", link: "https://overwatch.blizzard.com" },
+    { id: 2, name: "PUBG", color: "text-amber-600", icon: "MousePointer2", link: "https://pubg.com" },
+    { id: 3, name: "Valorant", color: "text-rose-500", icon: "Zap", link: "https://playvalorant.com" },
+    { id: 4, name: "League of Legends", color: "text-indigo-600", icon: "Crown", link: "https://leagueoflegends.com" },
+    { id: 5, name: "Minecraft", color: "text-emerald-600", icon: "Gamepad2", link: "" },
+    { id: 6, name: "Lost Ark", color: "text-cyan-600", icon: "Sparkles", link: "" },
+    { id: 7, name: "Steam Games", color: "text-slate-700", icon: "Gamepad2", link: "" },
+    { id: 8, name: "Party Animals", color: "text-pink-500", icon: "Users", link: "" },
+  ],
+  roadmap: [
+    { id: 101, q: "Q1", year: "2026", title: "새로운 시작", desc: "공식 홈페이지 오픈 및 3기 멤버 대규모 모집", active: true },
+    { id: 102, q: "Q2", year: "2026", title: "마을 축제", desc: "종합 게임 내전 (Overwatch, Valorant) 및 경품 이벤트", active: false },
+    { id: 103, q: "Q3", year: "2026", title: "오프라인 정모", desc: "서울/부산 지역별 정모 및 랜파티 개최", active: false },
+    { id: 104, q: "Q4", year: "2026", title: "연말 어워즈", desc: "올해의 매너 유저 시상식 및 명예의 전당 등재", active: false },
+  ],
+  organization: [
+    { id: 201, title: "관리팀", role: "분쟁 조정 · 멤버 관리", icon: "Users" },
+    { id: 202, title: "콘텐츠팀", role: "내전 기획 · 방송 송출", icon: "Gamepad2" },
+    { id: 203, title: "디자인팀", role: "웹 디자인 · 배너 제작", icon: "Palette" },
+  ]
+};
+
+// --- 2. 유틸리티 컴포넌트 ---
+const FadeIn = ({ children, delay = 0, className = "" }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const domRef = useRef();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) setIsVisible(true);
+      });
+    }, { threshold: 0.1 });
+    const current = domRef.current;
+    if (current) observer.observe(current);
+    return () => current && observer.unobserve(current);
+  }, []);
+
+  return (
+    <div
+      ref={domRef}
+      className={`transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) transform ${
+        isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-12 blur-sm'
+      } ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+};
+
+// --- 3. 공통 모달 컴포넌트 (로그인 & 삭제 확인) ---
+const AdminLoginModal = ({ isOpen, onClose, onLogin }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setPassword('');
+      setError(false);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password === '0210') {
+      onLogin();
+      onClose();
+    } else {
+      setError(true);
+      setPassword('');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white">
+            <Lock size={20} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">관리자 접속</h3>
+            <p className="text-xs text-slate-500">Authorized Personnel Only</p>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="비밀번호 입력"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition-all placeholder:text-slate-300 text-center text-lg tracking-widest"
+              autoFocus
+            />
+            {error && <p className="text-rose-500 text-xs mt-2 font-medium text-center">비밀번호가 일치하지 않습니다.</p>}
+          </div>
+          <div className="flex gap-2 mt-6">
+            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors">취소</button>
+            <button type="submit" className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20">접속</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const ConfirmModal = ({ isOpen, message, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-4 text-rose-500">
+          <AlertCircle size={24} />
+          <h3 className="text-lg font-bold text-slate-900">삭제 확인</h3>
+        </div>
+        <p className="text-slate-600 mb-8">{message}</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={onClose} 
+            className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors"
+          >
+            취소
+          </button>
+          <button 
+            onClick={() => { onConfirm(); onClose(); }} 
+            className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-200 transition-colors"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- 4. 관리자 페이지 컴포넌트 ---
+const AdminPanel = ({ siteData, setSiteData, onLogout }) => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [tempData, setTempData] = useState(siteData); 
+  const [isSaved, setIsSaved] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [confirmModalState, setConfirmModalState] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const fetchDashboardStats = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setDashboardStats({
+        visitors: 1234 + Math.floor(Math.random() * 100),
+        applicants: 56 + Math.floor(Math.random() * 10),
+        members: 892,
+        serverStatus: 'Healthy'
+      });
+      setIsLoading(false);
+    }, 1200);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'dashboard') fetchDashboardStats();
+  }, [activeTab]);
+
+  const handleHeroChange = (e) => {
+    setTempData({ ...tempData, hero: { ...tempData.hero, [e.target.name]: e.target.value } });
+    setIsSaved(false);
+  };
+
+  // --- Game Handler ---
+  const handleGameChange = (id, field, value) => {
+    const newGames = tempData.games.map(game => game.id === id ? { ...game, [field]: value } : game);
+    setTempData({ ...tempData, games: newGames });
+    setIsSaved(false);
+  };
+  const addGame = () => {
+    const newId = Math.max(...tempData.games.map(g => g.id), 0) + 1;
+    const newGame = { id: newId, name: "New Game", color: "text-slate-500", icon: "Gamepad2", link: "" };
+    setTempData({ ...tempData, games: [...tempData.games, newGame] });
+    setIsSaved(false);
+  };
+  const requestDeleteGame = (id) => {
+    setConfirmModalState({
+      isOpen: true,
+      message: "정말 이 게임을 목록에서 삭제하시겠습니까?",
+      onConfirm: () => {
+        setTempData(prev => ({ ...prev, games: prev.games.filter(g => g.id !== id) }));
+        setIsSaved(false);
+      }
+    });
+  };
+
+  // --- Roadmap Handler ---
+  const handleRoadmapChange = (id, field, value) => {
+    const newRoadmap = tempData.roadmap.map(item => item.id === id ? { ...item, [field]: value } : item);
+    setTempData({ ...tempData, roadmap: newRoadmap });
+    setIsSaved(false);
+  };
+  const addRoadmapItem = () => {
+    const newId = Math.max(...tempData.roadmap.map(r => r.id), 100) + 1;
+    const newItem = { id: newId, q: "Q?", year: "2027", title: "새로운 계획", desc: "내용을 입력하세요", active: false };
+    setTempData({ ...tempData, roadmap: [...tempData.roadmap, newItem] });
+    setIsSaved(false);
+  };
+  const requestDeleteRoadmap = (id) => {
+    setConfirmModalState({
+      isOpen: true,
+      message: "이 로드맵 항목을 삭제하시겠습니까?",
+      onConfirm: () => {
+        setTempData(prev => ({ ...prev, roadmap: prev.roadmap.filter(item => item.id !== id) }));
+        setIsSaved(false);
+      }
+    });
+  };
+
+  // --- Organization Handler ---
+  const handleOrgChange = (id, field, value) => {
+    const newOrg = tempData.organization.map(item => item.id === id ? { ...item, [field]: value } : item);
+    setTempData({ ...tempData, organization: newOrg });
+    setIsSaved(false);
+  };
+  const addOrgItem = () => {
+    const newId = Math.max(...(tempData.organization.map(o => o.id).length ? tempData.organization.map(o => o.id) : [200])) + 1;
+    const newItem = { id: newId, title: "새 부서", role: "역할 설명", icon: "Users" };
+    setTempData({ ...tempData, organization: [...tempData.organization, newItem] });
+    setIsSaved(false);
+  };
+  const requestDeleteOrg = (id) => {
+    setConfirmModalState({
+      isOpen: true,
+      message: "이 부서를 삭제하시겠습니까?",
+      onConfirm: () => {
+        setTempData(prev => ({ ...prev, organization: prev.organization.filter(item => item.id !== id) }));
+        setIsSaved(false);
+      }
+    });
+  };
+
+  const saveChanges = () => {
+    setSiteData(tempData);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  const menuItems = [
+    { id: 'dashboard', label: '대시보드', icon: <LayoutDashboard size={20} /> },
+    { id: 'hero', label: '메인 배너', icon: <ImageIcon size={20} /> },
+    { id: 'games', label: '게임 라인업', icon: <List size={20} /> },
+    { id: 'roadmap', label: '로드맵', icon: <Calendar size={20} /> },
+    { id: 'organization', label: '조직도', icon: <Users size={20} /> },
+    { id: 'settings', label: '설정', icon: <Settings size={20} /> },
+  ];
+
+  return (
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-800">
+      <ConfirmModal 
+        isOpen={confirmModalState.isOpen}
+        message={confirmModalState.message}
+        onConfirm={confirmModalState.onConfirm}
+        onClose={() => setConfirmModalState(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Sidebar */}
+      <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-2xl z-20">
+        <div className="p-6 flex items-center gap-3 border-b border-slate-800">
+          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
+            <Shield size={16} className="text-white" />
+          </div>
+          <div>
+            <h1 className="font-bold text-lg tracking-tight">Admin</h1>
+            <p className="text-xs text-slate-400">Manager Mode</p>
+          </div>
+        </div>
+        <nav className="flex-1 p-4 space-y-1">
+          {menuItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                activeTab === item.id 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="p-4 border-t border-slate-800">
+          <button onClick={onLogout} className="w-full flex items-center gap-2 px-4 py-3 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-all text-sm font-medium">
+            <LogOut size={18} /> 종료
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto">
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-10 px-8 py-4 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-slate-800 capitalize">{menuItems.find(m => m.id === activeTab)?.label}</h2>
+          <div className="flex items-center gap-4">
+             {isSaved && <span className="text-green-600 text-sm font-bold animate-pulse">저장되었습니다!</span>}
+             <button onClick={saveChanges} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95">
+               <Save size={18} /> 저장하기
+             </button>
+          </div>
+        </header>
+
+        <div className="p-8 max-w-5xl mx-auto space-y-8">
+          
+          {/* Dashboard */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold text-slate-700">실시간 현황 (DB Status: Connected)</h3>
+                <button onClick={fetchDashboardStats} className="p-2 hover:bg-slate-100 rounded-full transition-colors" title="새로고침">
+                  <RefreshCcw size={20} className={isLoading ? "animate-spin text-indigo-500" : "text-slate-500"} />
+                </button>
+              </div>
+              
+              {isLoading ? (
+                <div className="h-40 flex items-center justify-center bg-white rounded-2xl border border-slate-100">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 size={32} className="animate-spin text-indigo-500" />
+                    <span className="text-sm text-slate-400">데이터 집계 중...</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { label: '오늘 방문자', value: dashboardStats?.visitors, color: 'text-blue-600 bg-blue-50' },
+                    { label: '신규 가입 대기', value: dashboardStats?.applicants, color: 'text-rose-600 bg-rose-50' },
+                    { label: '총 입주민', value: dashboardStats?.members, color: 'text-emerald-600 bg-emerald-50' },
+                  ].map((stat, idx) => (
+                    <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                      <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
+                      <p className={`text-4xl font-bold mt-2 ${stat.color.split(' ')[0]}`}>{stat.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Hero Editor */}
+          {activeTab === 'hero' && (
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+              <div className="grid gap-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Since</label>
+                  <input type="text" name="since" value={tempData.hero.since} onChange={handleHeroChange} className="w-full px-4 py-3 rounded-lg border border-slate-200 outline-none focus:border-indigo-500 transition-all"/>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">타이틀 1</label>
+                    <input type="text" name="titlePrimary" value={tempData.hero.titlePrimary} onChange={handleHeroChange} className="w-full px-4 py-3 rounded-lg border border-slate-200 outline-none focus:border-indigo-500 transition-all"/>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">타이틀 2 (강조)</label>
+                    <input type="text" name="titleSecondary" value={tempData.hero.titleSecondary} onChange={handleHeroChange} className="w-full px-4 py-3 rounded-lg border border-slate-200 outline-none focus:border-indigo-500 transition-all"/>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">서브타이틀</label>
+                  <textarea name="subtitle" rows={4} value={tempData.hero.subtitle} onChange={handleHeroChange} className="w-full px-4 py-3 rounded-lg border border-slate-200 outline-none focus:border-indigo-500 transition-all resize-none"/>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Games Manager */}
+          {activeTab === 'games' && (
+            <div className="space-y-6">
+               <div className="grid grid-cols-1 gap-4">
+                 {tempData.games.map((game) => (
+                   <div key={game.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-6 group hover:border-indigo-200 transition-colors">
+                     <div className="flex items-center justify-center w-full md:w-auto">
+                        <div className="w-16 h-16 md:w-12 md:h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-inner">
+                          {React.createElement(ICON_MAP[game.icon] || Gamepad2, { size: 24 })}
+                        </div>
+                     </div>
+                     <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
+                       <div className="col-span-1">
+                         <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Game Name</label>
+                         <input type="text" value={game.name} onChange={(e) => handleGameChange(game.id, 'name', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 focus:border-indigo-500 outline-none"/>
+                       </div>
+                       <div className="col-span-1">
+                         <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Color (Tailwind)</label>
+                         <input type="text" value={game.color} onChange={(e) => handleGameChange(game.id, 'color', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-mono text-slate-500 focus:border-indigo-500 outline-none"/>
+                       </div>
+                       <div className="col-span-1">
+                         <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Icon</label>
+                         <select 
+                            value={game.icon} 
+                            onChange={(e) => handleGameChange(game.id, 'icon', e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:border-indigo-500 outline-none cursor-pointer"
+                         >
+                           {Object.keys(ICON_MAP).map(key => <option key={key} value={key}>{key}</option>)}
+                         </select>
+                       </div>
+                       <div className="col-span-1">
+                         <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Link URL</label>
+                         <div className="relative">
+                           <input type="text" value={game.link || ''} onChange={(e) => handleGameChange(game.id, 'link', e.target.value)} placeholder="https://" className="w-full pl-8 pr-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-indigo-500 outline-none"/>
+                           <LinkIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+                         </div>
+                       </div>
+                     </div>
+                     <button onClick={() => requestDeleteGame(game.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all self-end md:self-center" title="삭제">
+                       <Trash2 size={18} />
+                     </button>
+                   </div>
+                 ))}
+               </div>
+               <button onClick={addGame} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
+                 <Plus size={20} /> 새 게임 추가하기
+               </button>
+            </div>
+          )}
+
+          {/* Roadmap Manager */}
+          {activeTab === 'roadmap' && (
+            <div className="space-y-6">
+              {tempData.roadmap.map((item, idx) => (
+                <div key={item.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative group">
+                  <div className="absolute top-4 right-14 text-xs font-bold text-slate-300 bg-slate-50 px-2 py-1 rounded">ITEM #{idx + 1}</div>
+                  <button onClick={() => requestDeleteRoadmap(item.id)} className="absolute top-4 right-4 p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all">
+                    <Trash2 size={16} />
+                  </button>
+                  <div className="grid grid-cols-12 gap-4 mt-2">
+                    <div className="col-span-3 md:col-span-2">
+                       <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Quarter</label>
+                       <input value={item.q} onChange={(e) => handleRoadmapChange(item.id, 'q', e.target.value)} className="w-full px-3 py-2 rounded border border-slate-200 text-sm focus:border-indigo-500 outline-none"/>
+                    </div>
+                    <div className="col-span-3 md:col-span-2">
+                       <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Year</label>
+                       <input value={item.year} onChange={(e) => handleRoadmapChange(item.id, 'year', e.target.value)} className="w-full px-3 py-2 rounded border border-slate-200 text-sm focus:border-indigo-500 outline-none"/>
+                    </div>
+                    <div className="col-span-6 md:col-span-8">
+                       <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Title</label>
+                       <input value={item.title} onChange={(e) => handleRoadmapChange(item.id, 'title', e.target.value)} className="w-full px-3 py-2 rounded border border-slate-200 text-sm font-bold text-slate-800 focus:border-indigo-500 outline-none"/>
+                    </div>
+                    <div className="col-span-12">
+                       <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Description</label>
+                       <input value={item.desc} onChange={(e) => handleRoadmapChange(item.id, 'desc', e.target.value)} className="w-full px-3 py-2 rounded border border-slate-200 text-sm focus:border-indigo-500 outline-none"/>
+                    </div>
+                  </div>
+                </div>
+              ))}
+               <button onClick={addRoadmapItem} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
+                 <Plus size={20} /> 새 로드맵 추가하기
+               </button>
+            </div>
+          )}
+
+          {/* Organization Manager (New) */}
+          {activeTab === 'organization' && (
+            <div className="space-y-6">
+              <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start gap-3">
+                 <Shield className="text-indigo-500 mt-1" size={20} />
+                 <div>
+                   <h4 className="font-bold text-indigo-900 text-sm">기본 구조 안내</h4>
+                   <p className="text-xs text-indigo-700 mt-1">'촌장(운영진)'은 고정된 최상위 리더이며, 아래 목록은 그 하위에 배치되는 부서들입니다.</p>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {tempData.organization.map((org) => (
+                  <div key={org.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative group hover:border-indigo-200 transition-all">
+                    <button onClick={() => requestDeleteOrg(org.id)} className="absolute top-3 right-3 p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all">
+                       <Trash2 size={16} />
+                    </button>
+                    
+                    <div className="flex items-center gap-4 mb-4">
+                       <div className="w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600">
+                         {React.createElement(ICON_MAP[org.icon] || Users, { size: 24 })}
+                       </div>
+                       <div className="flex-1">
+                          <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Icon</label>
+                          <select 
+                             value={org.icon} 
+                             onChange={(e) => handleOrgChange(org.id, 'icon', e.target.value)}
+                             className="w-full px-2 py-1.5 rounded border border-slate-200 text-xs bg-white focus:border-indigo-500 outline-none"
+                          >
+                             {Object.keys(ICON_MAP).map(key => <option key={key} value={key}>{key}</option>)}
+                          </select>
+                       </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                         <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Team Name</label>
+                         <input type="text" value={org.title} onChange={(e) => handleOrgChange(org.id, 'title', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-800 focus:border-indigo-500 outline-none"/>
+                      </div>
+                      <div>
+                         <label className="text-[10px] text-slate-400 font-bold mb-1 block uppercase">Role Description</label>
+                         <input type="text" value={org.role} onChange={(e) => handleOrgChange(org.id, 'role', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 focus:border-indigo-500 outline-none"/>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={addOrgItem} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
+                 <Plus size={20} /> 새 부서 추가하기
+               </button>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm text-center">
+              <Settings size={48} className="mx-auto text-slate-200 mb-4" />
+              <p className="text-slate-500 font-medium">환경 설정</p>
+              <p className="text-xs text-slate-400 mt-2">데이터베이스 연결 및 관리자 계정 설정이 이곳에 표시됩니다.</p>
+            </div>
+          )}
+
+        </div>
+      </main>
+    </div>
+  );
+};
+
+// --- 5. 사용자 웹사이트 컴포넌트 ---
+const UserWebsite = ({ data, onOpenAdmin }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: '소개', href: '#about' },
+    { name: '가치관', href: '#values' },
+    { name: '게임', href: '#games' },
+    { name: '로드맵', href: '#roadmap' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F8F9FA] text-slate-800 font-sans selection:bg-slate-900 selection:text-white overflow-x-hidden">
+      {/* Background Mesh */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[80vw] h-[80vw] bg-gradient-to-br from-indigo-100/40 to-transparent rounded-full blur-[150px]" />
+        <div className="absolute top-[20%] right-[-10%] w-[60vw] h-[60vw] bg-gradient-to-bl from-rose-100/30 to-transparent rounded-full blur-[150px]" />
+        <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+      </div>
+
+      {/* Navigation */}
+      <div className="fixed top-0 left-0 w-full z-50 flex justify-center py-6 px-4 pointer-events-none">
+        <nav className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${scrolled || isMenuOpen ? 'w-full max-w-5xl bg-white/70 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 rounded-full py-3 px-6' : 'w-full max-w-7xl bg-transparent py-4 px-0'}`}>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3 cursor-pointer group">
+              <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Sparkles size={16} strokeWidth={2} className="text-yellow-200" />
+              </div>
+              <span className="text-lg font-bold tracking-tight text-slate-900">평화로운 게임마을</span>
+            </div>
+            <div className="hidden md:flex items-center gap-1">
+              {navLinks.map((link) => (
+                <a key={link.name} href={link.href} className="px-5 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100/50 rounded-full transition-all">{link.name}</a>
+              ))}
+              <div className="w-px h-4 bg-slate-200 mx-3"></div>
+              <button className="px-6 py-2.5 rounded-full bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 active:scale-95 flex items-center gap-2">가입하기</button>
+            </div>
+            <button className="md:hidden text-slate-900 p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </nav>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-40 bg-white/95 backdrop-blur-xl pt-32 px-6 animate-in fade-in slide-in-from-bottom-4 duration-300 md:hidden">
+          <div className="flex flex-col gap-6">
+            {navLinks.map((link) => (
+              <a key={link.name} href={link.href} className="text-2xl font-semibold text-slate-800 tracking-tight" onClick={() => setIsMenuOpen(false)}>{link.name}</a>
+            ))}
+            <div className="h-px w-full bg-slate-100 my-4"></div>
+            <button className="w-full py-4 rounded-xl bg-slate-900 text-white font-bold text-lg">입주 신청하기</button>
+          </div>
+        </div>
+      )}
+
+      {/* Hero Section */}
+      <header id="about" className="relative z-10 pt-48 pb-32 px-6 flex flex-col items-center text-center">
+        <FadeIn delay={100}>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 border border-slate-200/60 backdrop-blur-sm shadow-sm mb-8 cursor-default">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Since {data.hero.since} • Premium Community</span>
+          </div>
+        </FadeIn>
+        <FadeIn delay={200}>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-slate-900 leading-[1.05] mb-8">
+            {data.hero.titlePrimary}<br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500">{data.hero.titleSecondary}</span>
+          </h1>
+        </FadeIn>
+        <FadeIn delay={300}>
+          <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-12 leading-relaxed font-light whitespace-pre-line">
+            {data.hero.subtitle}
+          </p>
+        </FadeIn>
+        <FadeIn delay={400}>
+          <div className="flex flex-col sm:flex-row gap-5 items-center">
+            <button className="group relative px-8 py-4 rounded-full bg-slate-900 text-white font-medium shadow-[0_20px_40px_-15px_rgba(15,23,42,0.3)] hover:shadow-[0_20px_40px_-10px_rgba(15,23,42,0.4)] transition-all hover:-translate-y-1 overflow-hidden">
+              <span className="relative z-10 flex items-center gap-2">입주 신청하기 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></span>
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-800 to-slate-900 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
+            <button className="px-8 py-4 rounded-full bg-white text-slate-600 font-medium border border-slate-200 shadow-sm hover:bg-slate-50 transition-all">둘러보기</button>
+          </div>
+        </FadeIn>
+      </header>
+
+      {/* Values Section */}
+      <section id="values" className="py-32 relative z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <FadeIn>
+            <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Core Values</h2>
+                <div className="h-1 w-20 bg-slate-900 mt-4"></div>
+              </div>
+              <p className="text-slate-500 max-w-sm text-right leading-relaxed">평화로운 게임마을은<br/>단단한 원칙 위에 세워진 공간입니다.</p>
+            </div>
+          </FadeIn>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { icon: <Heart strokeWidth={1.5} />, title: "존중과 매너", subtitle: "Respect & Manner", desc: "실력보다 중요한 것은 인성입니다. 욕설과 비난 없는 클린한 게임 문화를 지향합니다." },
+              { icon: <MessageCircle strokeWidth={1.5} />, title: "따뜻한 소통", subtitle: "Communication", desc: "게임 외적인 일상의 대화도 환영합니다. 서로의 하루를 응원하는 따뜻한 공간입니다." },
+              { icon: <Coffee strokeWidth={1.5} />, title: "진정한 휴식", subtitle: "Real Relaxation", desc: "치열한 경쟁에 지쳤다면 이곳이 정답입니다. 이기는 게임보다 즐거운 게임을 추구합니다." }
+            ].map((item, idx) => (
+              <FadeIn key={idx} delay={idx * 150}>
+                <div className="group relative p-10 rounded-[2rem] border border-white/60 bg-gradient-to-br from-white to-slate-50 h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)]">
+                  <div className="absolute inset-0 bg-white/40 backdrop-blur-3xl rounded-[2rem] -z-10"></div>
+                  <div className="mb-8 w-16 h-16 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-900 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                    {React.cloneElement(item.icon, { size: 32 })}
+                  </div>
+                  <div className="space-y-2 mb-6">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.subtitle}</span>
+                    <h3 className="text-2xl font-bold text-slate-900">{item.title}</h3>
+                  </div>
+                  <p className="text-slate-500 leading-relaxed word-break-keep text-[15px]">{item.desc}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Game Lineup */}
+      <section id="games" className="py-32 relative z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <FadeIn>
+            <div className="text-center mb-20">
+              <span className="text-slate-500 font-medium text-sm tracking-widest uppercase mb-3 block">Curated Collection</span>
+              <h2 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight">Game Lineup</h2>
+            </div>
+          </FadeIn>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {data.games.map((game, idx) => (
+              <FadeIn key={game.id} delay={idx * 50}>
+                <a 
+                  href={game.link || "#"} 
+                  target={game.link ? "_blank" : "_self"}
+                  rel="noopener noreferrer"
+                  className={`group relative aspect-square bg-white rounded-3xl border border-slate-100 p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.06)] hover:border-slate-200 ${game.link ? 'cursor-pointer' : 'cursor-default'}`}
+                >
+                  <div className={`w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center ${game.color} group-hover:scale-110 transition-transform duration-300`}>
+                    {React.createElement(ICON_MAP[game.icon] || Gamepad2, { size: 24, strokeWidth: 1.5 })}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-lg">{game.name}</span>
+                    {game.link && (
+                      <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-slate-400" />
+                    )}
+                  </div>
+                </a>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Roadmap */}
+      <section id="roadmap" className="py-32 bg-white relative z-10">
+        <div className="max-w-4xl mx-auto px-6">
+          <FadeIn>
+            <div className="mb-20 text-center">
+              <h2 className="text-3xl font-bold text-slate-900">Vision Roadmap</h2>
+              <p className="text-slate-400 mt-2">함께 그려나갈 미래입니다.</p>
+            </div>
+          </FadeIn>
+          <div className="relative">
+            <div className="absolute left-[19px] md:left-1/2 md:-ml-px top-0 bottom-0 w-[2px] bg-slate-100"></div>
+            <div className="space-y-16">
+              {data.roadmap.map((item, idx) => (
+                <FadeIn key={idx} delay={idx * 150}>
+                  <div className="relative flex md:justify-center items-center group">
+                    <div className={`absolute left-0 md:left-1/2 md:-ml-[6px] w-3 h-3 rounded-full border-[3px] z-10 bg-white transition-all duration-300 ${item.active ? 'border-slate-900 scale-125' : 'border-slate-300 group-hover:border-slate-400'}`}></div>
+                    <div className={`flex flex-col md:flex-row w-full ${idx % 2 === 0 ? 'md:flex-row-reverse' : ''} pl-12 md:pl-0`}>
+                      <div className="md:w-1/2 md:px-12 text-left md:text-right group-hover:-translate-y-1 transition-transform duration-300">
+                         <div className={idx % 2 === 0 ? 'md:text-left' : 'md:text-right'}>
+                            <span className="text-slate-400 font-bold text-xs tracking-widest">{item.year} {item.q}</span>
+                            <h3 className="text-xl font-bold text-slate-900 mt-1 mb-2">{item.title}</h3>
+                            <p className="text-slate-500 text-sm font-light leading-relaxed">{item.desc}</p>
+                         </div>
+                      </div>
+                      <div className="md:w-1/2"></div>
+                    </div>
+                  </div>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Community Structure */}
+      <section className="py-32 relative z-10 overflow-hidden">
+        <div className="absolute inset-0 bg-slate-50/50 -z-10"></div>
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <FadeIn><h2 className="text-3xl font-bold text-slate-900 mb-16">Organization</h2></FadeIn>
+          <FadeIn delay={200}>
+            <div className="flex flex-col items-center">
+              <div className="relative mb-12">
+                 <div className="bg-white border border-slate-200 px-10 py-5 rounded-2xl shadow-xl shadow-slate-200/50 flex items-center gap-4 relative z-10">
+                   <div className="p-2 bg-slate-900 rounded-lg text-white"><Shield size={20} /></div>
+                   <div className="text-left"><div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Leadership</div><div className="font-bold text-slate-900">촌장 (운영진)</div></div>
+                 </div>
+                 <div className="absolute top-full left-1/2 w-px h-12 bg-slate-300 -translate-x-1/2"></div>
+              </div>
+              <div className="w-[80%] md:w-[60%] h-px bg-slate-300 mb-8 relative">
+                <div className="absolute left-0 top-0 w-px h-8 bg-slate-300"></div>
+                <div className="absolute right-0 top-0 w-px h-8 bg-slate-300"></div>
+                <div className="absolute left-1/2 top-[-32px] w-px h-8 bg-slate-300 -translate-x-1/2"></div>
+                <div className="absolute left-1/2 top-0 w-px h-8 bg-slate-300 -translate-x-1/2"></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full justify-center">
+                {data.organization.map((team, idx) => (
+                  <div key={team.id} className="flex flex-col items-center">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all w-full md:w-auto min-w-[200px] cursor-default">
+                      <div className="w-10 h-10 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center mx-auto mb-4">
+                        {React.createElement(ICON_MAP[team.icon] || Users, { size: 16 })}
+                      </div>
+                      <h4 className="font-bold text-slate-800 mb-1">{team.title}</h4>
+                      <p className="text-xs text-slate-400">{team.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Footer & Admin Toggle */}
+      <footer className="bg-white border-t border-slate-100 py-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white"><Sparkles size={14} /></div>
+              <span className="font-bold text-slate-900 tracking-tight">평화로운 게임마을</span>
+            </div>
+            
+            {/* Quick Links Group */}
+            <div className="flex flex-col items-center md:items-end gap-3">
+              <div className="flex gap-8 text-sm text-slate-500">
+                <a href="#" className="hover:text-slate-900 transition-colors">Terms</a>
+                <a href="#" className="hover:text-slate-900 transition-colors">Privacy</a>
+                <a href="#" className="hover:text-slate-900 transition-colors">Guide</a>
+              </div>
+              <button onClick={onOpenAdmin} className="text-[11px] text-slate-300 hover:text-slate-500 transition-colors font-medium tracking-wide">Admin Access</button>
+            </div>
+            <div className="flex items-center gap-4">
+              <p className="text-xs text-slate-400 font-medium">© 2026 Peaceful Game Village.</p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+// --- 6. 최상위 앱 컴포넌트 ---
+export default function App() {
+  const [view, setView] = useState('user'); 
+  const [siteData, setSiteData] = useState(initialSiteData);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  return (
+    <>
+      {view === 'user' ? (
+        <UserWebsite data={siteData} onOpenAdmin={() => setIsLoginModalOpen(true)} />
+      ) : (
+        <AdminPanel siteData={siteData} setSiteData={setSiteData} onLogout={() => setView('user')} />
+      )}
+      <AdminLoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={() => setView('admin')} />
+    </>
+  );
+}
