@@ -33,6 +33,7 @@ const initialSiteData = {
         { id: 'hero', label: '메인 예고편', show: true },
         { id: 'video', label: '소개 영상', show: true }, // New Video Section
         { id: 'values', label: '가치관', show: true },
+        { id: 'contents', label: '컨텐츠', show: true }, // New Contents Section
         { id: 'gallery', label: '활동 갤러리', show: true }, // New Gallery Section
         { id: 'games', label: '게임 라인업', show: true },
         { id: 'roadmap', label: '로드맵', show: true },
@@ -125,6 +126,22 @@ export function useSiteData() {
                     console.log("✅ Firestore 연결 성공: 사이트 데이터를 불러왔습니다.");
                     const fetchedData = docSnap.data();
 
+                    // Migration: Ensure contents section exists
+                    let currentSectionOrder = fetchedData.sectionOrder || initialSiteData.sectionOrder;
+                    if (!currentSectionOrder.find(s => s.id === 'contents')) {
+                        const valuesIdx = currentSectionOrder.findIndex(s => s.id === 'values');
+                        const newSection = { id: 'contents', label: '컨텐츠', show: true };
+                        if (valuesIdx !== -1) {
+                            currentSectionOrder = [
+                                ...currentSectionOrder.slice(0, valuesIdx + 1),
+                                newSection,
+                                ...currentSectionOrder.slice(valuesIdx + 1)
+                            ];
+                        } else {
+                            currentSectionOrder.push(newSection);
+                        }
+                    }
+
                     // v3.0 Data Migration / Merge Logic
                     // Ensure new fields from initialSiteData are present even if missing in Firestore
                     const mergedData = {
@@ -136,7 +153,7 @@ export function useSiteData() {
                         footer: { ...initialSiteData.footer, ...fetchedData.footer },
                         logos: { ...initialSiteData.logos, ...fetchedData.logos },
                         // Ensure arrays/new objects are picked up if missing
-                        sectionOrder: fetchedData.sectionOrder || initialSiteData.sectionOrder,
+                        sectionOrder: currentSectionOrder,
                         gallery: fetchedData.gallery || initialSiteData.gallery,
                         survey: fetchedData.survey || initialSiteData.survey,
                     };

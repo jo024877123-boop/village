@@ -4,18 +4,22 @@ import { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Image as ImageIcon, List, Calendar, Users, Settings,
     LogOut, Save, Plus, Trash2, RefreshCcw, Loader2, Link as LinkIcon,
-    Shield, CheckCircle, XCircle, Move, Eye, EyeOff, Video, Sparkles
+    Shield, CheckCircle, XCircle, Move, Eye, EyeOff, Video, Sparkles, FileText,
+    Edit
 } from 'lucide-react';
 import { useSiteData, useApplications } from '@/hooks/useSiteData';
+import { useAllContents, contentActions } from '@/hooks/useContents';
 import { getIcon, ICON_MAP } from '@/lib/icons';
-import { useImageUpload } from '@/hooks/useImageUpload'; // Import hook
+import { useImageUpload } from '@/hooks/useImageUpload';
+import ContentEditModal from './ContentEditModal';
 import ConfirmModal from './modals/ConfirmModal';
 import React from 'react';
 
 export default function AdminPanel({ onLogout }) {
     const { siteData, setSiteData, saveSiteData, loading: dataLoading } = useSiteData();
     const { applications, loading: appsLoading, updateApplicationStatus, deleteApplication, fetchApplications } = useApplications();
-    const { uploadImage, uploading: isUploading, error: uploadError } = useImageUpload(); // Hook usage
+    const { contents: allContents, loading: contentsLoading } = useAllContents();
+    const { uploadImage, uploading: isUploading, error: uploadError } = useImageUpload();
 
     const [activeTab, setActiveTab] = useState('dashboard');
     const [tempData, setTempData] = useState(null);
@@ -27,6 +31,10 @@ export default function AdminPanel({ onLogout }) {
         message: '',
         onConfirm: () => { }
     });
+
+    // Contents management state
+    const [contentSaveMessage, setContentSaveMessage] = useState('');
+    const [editModalContent, setEditModalContent] = useState(null);
 
     // 초기 데이터 로드 시 tempData 설정 + Migration for video section
     useEffect(() => {
@@ -86,8 +94,6 @@ export default function AdminPanel({ onLogout }) {
     };
 
     // --- Handlers (Games, Roadmap, Org) ---
-    // (Using generic handlers to save space if needed, but explicit is better for clarity)
-
     const handleGameChange = (id, field, value) => {
         const newGames = tempData.games.map(game => game.id === id ? { ...game, [field]: value } : game);
         setTempData({ ...tempData, games: newGames });
@@ -216,8 +222,9 @@ export default function AdminPanel({ onLogout }) {
 
     const menuItems = [
         { id: 'dashboard', label: '대시보드', icon: <LayoutDashboard size={20} /> },
-        { id: 'basic', label: '기본 정보', icon: <Settings size={20} /> }, // New Request #1
+        { id: 'basic', label: '기본 정보', icon: <Settings size={20} /> },
         { id: 'sections', label: '섹션 관리', icon: <Move size={20} /> },
+        { id: 'contents', label: '컨텐츠 관리', icon: <FileText size={20} /> },
         { id: 'hero', label: '메인 배너', icon: <Sparkles size={20} /> },
         { id: 'video', label: '비디오', icon: <Video size={20} /> },
         { id: 'gallery', label: '갤러리 관리', icon: <ImageIcon size={20} /> },
@@ -337,7 +344,7 @@ export default function AdminPanel({ onLogout }) {
                         </div>
                     )}
 
-                    {/* Basic Info Editor (Request #1) */}
+                    {/* Basic Info Editor */}
                     {activeTab === 'basic' && (
                         <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
                             <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -376,7 +383,6 @@ export default function AdminPanel({ onLogout }) {
                             </div>
                         </div>
                     )}
-
                     {/* NEW: Section Management */}
                     {activeTab === 'sections' && (
                         <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
@@ -599,7 +605,6 @@ export default function AdminPanel({ onLogout }) {
                         </div>
                     )}
 
-                    {/* Roadmap & Organization editors are similar... omitting full detail to fit context but applying same pattern */}
                     {activeTab === 'roadmap' && (
                         <div className="space-y-6">
                             {tempData.roadmap.map((item, idx) => (
@@ -722,8 +727,6 @@ export default function AdminPanel({ onLogout }) {
                         </div>
                     )}
 
-
-                    {/* Logo Manager */}
                     {activeTab === 'logos' && (
                         <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-8">
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm text-slate-600 mb-6">
@@ -826,7 +829,6 @@ export default function AdminPanel({ onLogout }) {
                             </div>
                         </div>
                     )}
-
                     {/* Global Text Editor */}
                     {activeTab === 'texts' && (
                         <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
@@ -1034,6 +1036,158 @@ export default function AdminPanel({ onLogout }) {
                                     className="w-full px-4 py-3 rounded-lg border border-slate-200 outline-none focus:border-indigo-500 transition-all resize-none font-medium text-slate-600"
                                 />
                             </div>
+                        </div>
+                    )}
+
+                    {/* Contents Manager */}
+                    {activeTab === 'contents' && (
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800">컨텐츠 관리</h3>
+                                    <p className="text-sm text-slate-500 mt-1">사이트의 컨텐츠를 추가, 수정, 삭제할 수 있습니다.</p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm('초기 8개 컨텐츠를 생성하시겠습니까?')) return;
+                                        const result = await contentActions.initializeContents();
+                                        setContentSaveMessage(result.message || result.error);
+                                        setTimeout(() => setContentSaveMessage(''), 3000);
+                                    }}
+                                    disabled={contentsLoading || allContents.length > 0}
+                                    className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg font-bold text-sm hover:bg-indigo-200 transition-all disabled:opacity-50"
+                                >
+                                    초기 데이터 생성
+                                </button>
+                            </div>
+
+                            {contentSaveMessage && (
+                                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg font-bold text-sm">
+                                    {contentSaveMessage}
+                                </div>
+                            )}
+
+                            {contentsLoading ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 className="animate-spin text-indigo-500" size={40} />
+                                </div>
+                            ) : allContents.length === 0 ? (
+                                <div className="text-center py-20 bg-slate-50 rounded-xl border border-slate-200">
+                                    <FileText size={48} className="mx-auto text-slate-300 mb-4" />
+                                    <p className="text-slate-500">등록된 컨텐츠가 없습니다.</p>
+                                    <p className="text-sm text-slate-400 mt-2">위 버튼을 눌러 초기 데이터를 생성하세요.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {allContents.map((content, idx) => {
+                                            const ContentIcon = getIcon(content.icon);
+                                            return (
+                                                <div key={content.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                                                    <div className="flex items-start gap-4">
+                                                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${content.color} flex items-center justify-center flex-shrink-0`}>
+                                                            <ContentIcon size={24} className="text-white" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <h4 className="font-bold text-slate-800 truncate">{content.title}</h4>
+                                                                <span className="text-xs text-slate-400 px-2 py-0.5 bg-slate-100 rounded">#{content.order}</span>
+                                                                {!content.show && <EyeOff size={14} className="text-slate-400" />}
+                                                            </div>
+                                                            <p className="text-sm text-slate-500 truncate">{content.subtitle}</p>
+                                                            <p className="text-xs text-slate-400 mt-2">/{content.slug}</p>
+                                                        </div>
+                                                        <div className="flex flex-col gap-1">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (idx === 0) return;
+                                                                    const newOrder = [...allContents];
+                                                                    [newOrder[idx], newOrder[idx - 1]] = [newOrder[idx - 1], newOrder[idx]];
+                                                                    await contentActions.reorderContents(newOrder);
+                                                                }}
+                                                                disabled={idx === 0}
+                                                                className="p-1 hover:bg-slate-100 rounded text-slate-400 disabled:opacity-20"
+                                                            >
+                                                                ▲
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (idx === allContents.length - 1) return;
+                                                                    const newOrder = [...allContents];
+                                                                    [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+                                                                    await contentActions.reorderContents(newOrder);
+                                                                }}
+                                                                disabled={idx === allContents.length - 1}
+                                                                className="p-1 hover:bg-slate-100 rounded text-slate-400 disabled:opacity-20"
+                                                            >
+                                                                ▼
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
+                                                        <a
+                                                            href={`/contents/${content.slug}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-1 px-3 py-2 bg-slate-50 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-100 transition-all text-center"
+                                                        >
+                                                            미리보기
+                                                        </a>
+                                                        <button
+                                                            onClick={() => setEditModalContent(content)}
+                                                            className="flex-1 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all text-center flex items-center justify-center gap-2"
+                                                        >
+                                                            <Edit size={16} /> 편집
+                                                        </button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                const result = await contentActions.updateContent(content.id, { show: !content.show });
+                                                                setContentSaveMessage(result.success ? '노출 설정 변경!' : '실패');
+                                                                setTimeout(() => setContentSaveMessage(''), 2000);
+                                                            }}
+                                                            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${content.show ? 'bg-slate-100 text-slate-600' : 'bg-yellow-50 text-yellow-600'}`}
+                                                            title={content.show ? '숨기기' : '보이기'}
+                                                        >
+                                                            {content.show ? <Eye size={16} /> : <EyeOff size={16} />}
+                                                        </button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!confirm('정말 삭제하시겠습니까?')) return;
+                                                                const result = await contentActions.deleteContent(content.id);
+                                                                setContentSaveMessage(result.success ? '삭제 완료!' : '실패');
+                                                                setTimeout(() => setContentSaveMessage(''), 2000);
+                                                            }}
+                                                            className="px-3 py-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-100 hover:text-rose-500 transition-all"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4">
+                                        <p className="text-xs text-slate-500 font-medium">
+                                            💡 팁: '편집' 버튼을 눌러 각 컨텐츠의 <strong>특징, 갤러리, 유튜브 영상, 디자인</strong>을 상세하게 설정할 수 있습니다.
+                                        </p>
+                                    </div>
+                                </>
+                            )}
+
+                            <ContentEditModal
+                                isOpen={!!editModalContent}
+                                onClose={() => setEditModalContent(null)}
+                                content={editModalContent}
+                                onSave={async (updatedContent) => {
+                                    const result = await contentActions.updateContent(updatedContent.id, updatedContent);
+                                    if (result.success) {
+                                        setContentSaveMessage('수정 완료!');
+                                        setTimeout(() => setContentSaveMessage(''), 2000);
+                                    } else {
+                                        alert('수정 실패: ' + result.error);
+                                    }
+                                }}
+                            />
                         </div>
                     )}
                 </div>

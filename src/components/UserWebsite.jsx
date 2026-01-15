@@ -10,6 +10,7 @@ import FadeIn from './ui/FadeIn';
 import { getIcon } from '@/lib/icons';
 import React from 'react';
 import GallerySection from './GallerySection'; // New Import
+import ContentsSection from './ContentsSection'; // New Import
 
 export default function UserWebsite() {
     const { siteData, loading } = useSiteData();
@@ -32,9 +33,10 @@ export default function UserWebsite() {
     const navLinks = [
         { name: '소개', href: '#hero' },
         { name: '가치관', href: '#values' },
+        { name: '컨텐츠', href: '#contents' },
         { name: '게임', href: '#games' },
         { name: '로드맵', href: '#roadmap' },
-        { name: '갤러리', href: '#gallery' }, // Added to Nav
+        { name: '갤러리', href: '#gallery' },
     ];
 
     // Helper to determine if we should show video content
@@ -214,6 +216,8 @@ export default function UserWebsite() {
                         </div>
                     </section>
                 );
+            case 'contents':
+                return <ContentsSection key={section.id} />;
             case 'gallery':
                 return <GallerySection key={section.id} galleryData={siteData.gallery} />;
             case 'games':

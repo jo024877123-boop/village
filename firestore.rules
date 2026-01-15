@@ -8,6 +8,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null; // 관리자 인증 필요
     }
+
+    // 컨텐츠 데이터 (누구나 읽기 가능 / 관리자만 쓰기)
+    match /contents/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
     
     // 가입 신청서 (누구나 생성 가능 / 관리자만 읽기, 수정, 삭제)
     match /applications/{document=**} {
