@@ -18,6 +18,11 @@ export default function UserWebsite() {
     const [scrolled, setScrolled] = useState(false);
     const [showVideoModal, setShowVideoModal] = useState(false);
     const [isDimmed, setIsDimmed] = useState(false); // New Dim Mode State
+    const [selectedImage, setSelectedImage] = useState(null); // Gallery Lightbox State
+
+    const handleImageSelect = (image) => {
+        setSelectedImage(image);
+    };
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -218,8 +223,6 @@ export default function UserWebsite() {
                 );
             case 'contents':
                 return <ContentsSection key={section.id} />;
-            case 'gallery':
-                return <GallerySection key={section.id} galleryData={siteData.gallery} />;
             case 'games':
                 return (
                     <section key={section.id} id="games" className="py-32 relative z-10">
@@ -392,13 +395,6 @@ export default function UserWebsite() {
             default: return null;
         }
     }
-
-    // Gallery Image Handler
-    const [selectedImage, setSelectedImage] = useState(null);
-
-    const handleImageSelect = (image) => {
-        setSelectedImage(image);
-    };
 
     return (
         <div className={`transition-colors duration-500 dark`}>

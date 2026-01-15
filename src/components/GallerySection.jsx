@@ -3,7 +3,7 @@
 import { ZoomIn } from 'lucide-react';
 import FadeIn from './ui/FadeIn';
 
-export default function GallerySection({ galleryData, onImageSelect }) {
+export default function GallerySection({ galleryData, onImageSelect = () => { } }) {
     if (!galleryData || galleryData.length === 0) return null;
 
     return (
