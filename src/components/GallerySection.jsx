@@ -20,7 +20,7 @@ export default function GallerySection({ galleryData, onImageSelect = () => { } 
                     {galleryData.map((item, idx) => (
                         <FadeIn key={item.id} delay={idx * 100}>
                             <div
-                                className="group relative aspect-video rounded-2xl overflow-hidden cursor-pointer shadow-lg shadow-slate-200/50 hover:shadow-2xl hover:shadow-sky-900/10 transition-all hover:-translate-y-1"
+                                className="group relative aspect-video rounded-2xl overflow-hidden cursor-pointer shadow-lg shadow-slate-200/50 hover:shadow-2xl hover:shadow-sky-900/10 transition-all hover:-translate-y-1 active:scale-[0.98]"
                                 onClick={() => onImageSelect(item)}
                             >
                                 <div className="absolute inset-0 bg-slate-900/20 group-hover:bg-slate-900/0 transition-colors z-10"></div>

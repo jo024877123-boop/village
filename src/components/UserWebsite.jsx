@@ -591,26 +591,26 @@ export default function UserWebsite() {
                 {/* Gallery Lightbox Modal - Hoisted for correct Z-Index */}
                 {selectedImage && (
                     <div
-                        className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300"
+                        className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-0 md:p-4 animate-in fade-in duration-300"
                         onClick={() => setSelectedImage(null)}
                     >
                         <button
                             onClick={() => setSelectedImage(null)}
-                            className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors z-[10000]"
+                            className="absolute top-4 right-4 md:top-8 md:right-8 text-white/50 hover:text-white transition-colors z-[10000]"
                         >
-                            <X size={40} />
+                            <X className="w-8 h-8 md:w-10 md:h-10" />
                         </button>
                         <div
-                            className="relative max-w-6xl max-h-[85vh] w-full rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+                            className="relative max-w-6xl w-full h-full md:h-auto md:max-h-[85vh] md:rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex items-center justify-center bg-black"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <img
                                 src={selectedImage.imageUrl}
                                 alt={selectedImage.caption}
-                                className="w-full h-full object-contain max-h-[85vh] bg-black"
+                                className="w-full h-full object-contain"
                             />
-                            <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
-                                <h3 className="text-white font-bold text-2xl">{selectedImage.caption}</h3>
+                            <div className="absolute bottom-0 left-0 w-full p-4 md:p-6 bg-gradient-to-t from-black/90 to-transparent">
+                                <h3 className="text-white font-bold text-xl md:text-2xl">{selectedImage.caption}</h3>
                             </div>
                         </div>
                     </div>
