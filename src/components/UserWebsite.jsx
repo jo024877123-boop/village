@@ -393,6 +393,13 @@ export default function UserWebsite() {
         }
     }
 
+    // Gallery Image Handler
+    const [selectedImage, setSelectedImage] = useState(null);
+
+    const handleImageSelect = (image) => {
+        setSelectedImage(image);
+    };
+
     return (
         <div className={`transition-colors duration-500 dark`}>
             <div className="min-h-screen bg-[#0a0a0f] text-white font-sans selection:bg-cyan-500/30 selection:text-cyan-200 overflow-x-hidden relative">
@@ -522,7 +529,12 @@ export default function UserWebsite() {
 
                 {/* Dynamic Content Sections */}
                 <main className="flex flex-col">
-                    {siteData.sectionOrder?.map((section) => renderSection(section))}
+                    {siteData.sectionOrder?.map((section) => {
+                        if (section.id === 'gallery') {
+                            return <GallerySection key={section.id} galleryData={siteData.gallery} onImageSelect={handleImageSelect} />;
+                        }
+                        return renderSection(section);
+                    })}
 
                     {/* Fallback: Render Video Section if not in sectionOrder but video exists */}
                     {hasVideo && !siteData.sectionOrder?.find(s => s.id === 'video') && (
@@ -580,6 +592,34 @@ export default function UserWebsite() {
                     </div>
                 )}
 
+                {/* Gallery Lightbox Modal - Hoisted for correct Z-Index */}
+                {selectedImage && (
+                    <div
+                        className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300"
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <button
+                            onClick={() => setSelectedImage(null)}
+                            className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors z-[10000]"
+                        >
+                            <X size={40} />
+                        </button>
+                        <div
+                            className="relative max-w-6xl max-h-[85vh] w-full rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <img
+                                src={selectedImage.imageUrl}
+                                alt={selectedImage.caption}
+                                className="w-full h-full object-contain max-h-[85vh] bg-black"
+                            />
+                            <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
+                                <h3 className="text-white font-bold text-2xl">{selectedImage.caption}</h3>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Footer & Admin Toggle */}
                 <footer className="bg-slate-950 border-t border-slate-900 py-12 relative z-10">
                     <div className="max-w-7xl mx-auto px-6">
@@ -607,3 +647,4 @@ export default function UserWebsite() {
         </div>
     );
 }
+

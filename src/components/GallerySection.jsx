@@ -1,12 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Image as ImageIcon, ZoomIn } from 'lucide-react';
+import { ZoomIn } from 'lucide-react';
 import FadeIn from './ui/FadeIn';
 
-export default function GallerySection({ galleryData }) {
-    const [selectedImage, setSelectedImage] = useState(null);
-
+export default function GallerySection({ galleryData, onImageSelect }) {
     if (!galleryData || galleryData.length === 0) return null;
 
     return (
@@ -24,7 +21,7 @@ export default function GallerySection({ galleryData }) {
                         <FadeIn key={item.id} delay={idx * 100}>
                             <div
                                 className="group relative aspect-video rounded-2xl overflow-hidden cursor-pointer shadow-lg shadow-slate-200/50 hover:shadow-2xl hover:shadow-sky-900/10 transition-all hover:-translate-y-1"
-                                onClick={() => setSelectedImage(item)}
+                                onClick={() => onImageSelect(item)}
                             >
                                 <div className="absolute inset-0 bg-slate-900/20 group-hover:bg-slate-900/0 transition-colors z-10"></div>
                                 <img
@@ -43,34 +40,6 @@ export default function GallerySection({ galleryData }) {
                     ))}
                 </div>
             </div>
-
-            {/* Lightbox Modal */}
-            {selectedImage && (
-                <div
-                    className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300"
-                    onClick={() => setSelectedImage(null)}
-                >
-                    <button
-                        onClick={() => setSelectedImage(null)}
-                        className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors"
-                    >
-                        <X size={40} />
-                    </button>
-                    <div
-                        className="relative max-w-6xl max-h-[85vh] w-full rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <img
-                            src={selectedImage.imageUrl}
-                            alt={selectedImage.caption}
-                            className="w-full h-full object-contain max-h-[85vh] bg-black"
-                        />
-                        <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
-                            <h3 className="text-white font-bold text-2xl">{selectedImage.caption}</h3>
-                        </div>
-                    </div>
-                </div>
-            )}
         </section>
     );
 }
