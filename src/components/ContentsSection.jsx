@@ -32,30 +32,30 @@ export default function ContentsSection() {
                     </div>
                 </FadeIn>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                     {contents.map((content, idx) => {
                         const ContentIcon = getIcon(content.icon);
                         return (
                             <FadeIn key={content.id} delay={idx * 100}>
                                 <Link href={`/contents/${content.slug}`} className="block h-full group">
-                                    <div className={`h-full relative overflow-hidden rounded-2xl bg-gradient-to-br ${content.color} p-[1px] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_30px_rgba(0,255,255,0.2)]`}>
-                                        <div className="h-full bg-slate-900/95 backdrop-blur-sm rounded-[15px] p-6 flex flex-col relative z-10 transition-colors group-hover:bg-slate-900/90">
+                                    <div className={`h-full relative overflow-hidden rounded-2xl bg-gradient-to-br ${content.color} p-[1px] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_30px_rgba(0,255,255,0.2)] aspect-square md:aspect-auto`}>
+                                        <div className="h-full bg-slate-900/95 backdrop-blur-sm rounded-[15px] p-0 md:p-6 flex flex-col items-center justify-center md:items-start md:justify-start relative z-10 transition-colors group-hover:bg-slate-900/90">
                                             {/* Icon */}
-                                            <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${content.color} flex items-center justify-center mb-5 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
-                                                <ContentIcon size={28} className="text-white" />
+                                            <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl bg-gradient-to-br ${content.color} flex items-center justify-center mb-0 md:mb-5 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
+                                                <ContentIcon size={20} className="md:w-7 md:h-7 text-white" />
                                             </div>
 
-                                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                                            <h3 className="hidden md:block text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
                                                 {content.title}
                                             </h3>
-                                            <p className="text-sm text-cyan-500/80 font-semibold mb-3">
+                                            <p className="hidden md:block text-sm text-cyan-500/80 font-semibold mb-3">
                                                 {content.subtitle}
                                             </p>
-                                            <p className="text-slate-400 text-sm leading-relaxed mb-6 flex-1 line-clamp-2">
+                                            <p className="hidden md:block text-slate-400 text-sm leading-relaxed mb-6 flex-1 line-clamp-2">
                                                 {content.description}
                                             </p>
 
-                                            <div className="flex items-center text-sm font-bold text-fuchsia-400 group-hover:translate-x-1 transition-transform">
+                                            <div className="hidden md:flex items-center text-sm font-bold text-fuchsia-400 group-hover:translate-x-1 transition-transform">
                                                 자세히 보기 <ArrowRight size={14} className="ml-1" />
                                             </div>
                                         </div>
